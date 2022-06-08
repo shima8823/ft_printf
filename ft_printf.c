@@ -6,19 +6,18 @@
 /*   By: shima <shima@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/05/28 10:39:01 by shima             #+#    #+#             */
-/*   Updated: 2022/06/02 11:14:33 by shima            ###   ########.fr       */
+/*   Updated: 2022/06/08 13:14:49 by shima            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ft_printf.h"
-#include "libft/libft.h"
 
-void	chose_fmt(char c, va_list *ap, int *len, size_t *i);
-int		put_u_nb_base(size_t nb, char *base, char c);
-int		put_nb(int nb);
-void	put_str(va_list *ap, int *output_len);
+static void	chose_fmt(char c, va_list *ap, int *len, size_t *i);
+static int	putunb_base(size_t nb, char *base, char c);
+static int	putnb(int nb);
+static void	putstr(va_list *ap, int *output_len);
 
-__attribute__((format(printf, 1, 2)))	int	ft_printf(const char *fmt, ...)
+int	ft_printf(const char *fmt, ...)
 {
 	int		len;
 	size_t	i;
@@ -34,34 +33,36 @@ __attribute__((format(printf, 1, 2)))	int	ft_printf(const char *fmt, ...)
 			chose_fmt(fmt[i + 1], &ap, &len, &i);
 		else
 			len += write(STDOUT_FILENO, &fmt[i++], 1);
-		if (errno != 0)
+		if (errno != 0 || len < 0)
 			break ;
 	}
 	va_end(ap);
+	if (errno != 0 || len < 0)
+		return (-1);
 	return (len);
 }
 
-void	chose_fmt(char c, va_list *ap, int *len, size_t *i)
+static void	chose_fmt(char c, va_list *ap, int *len, size_t *i)
 {
-	char	_c;
+	unsigned char	uc;
 
 	if (c == 'c')
 	{
-		_c = va_arg(*ap, int);
-		*len += write(STDOUT_FILENO, &_c, 1);
+		uc = (unsigned char)va_arg(*ap, int);
+		*len += write(STDOUT_FILENO, &uc, 1);
 	}
 	else if (c == 's')
-		put_str(ap, len);
+		putstr(ap, len);
 	else if (c == 'p')
-		*len += put_u_nb_base(va_arg(*ap, size_t), "0123456789abcdef", c);
+		*len += putunb_base((size_t)va_arg(*ap, void *), "0123456789abcdef", c);
 	else if (c == 'd' || c == 'i')
-		*len += put_nb(va_arg(*ap, int));
+		*len += putnb(va_arg(*ap, int));
 	else if (c == 'u')
-		*len += put_u_nb_base(va_arg(*ap, unsigned int), "0123456789", c);
+		*len += putunb_base(va_arg(*ap, unsigned int), "0123456789", c);
 	else if (c == 'x')
-		*len += put_u_nb_base(va_arg(*ap, unsigned int), "0123456789abcdef", c);
+		*len += putunb_base(va_arg(*ap, unsigned int), "0123456789abcdef", c);
 	else if (c == 'X')
-		*len += put_u_nb_base(va_arg(*ap, unsigned int), "0123456789ABCDEF", c);
+		*len += putunb_base(va_arg(*ap, unsigned int), "0123456789ABCDEF", c);
 	else if (c == '%')
 		*len += write(STDOUT_FILENO, "%", 1);
 	if (c == '\0')
@@ -70,35 +71,38 @@ void	chose_fmt(char c, va_list *ap, int *len, size_t *i)
 		(*i) += 2;
 }
 
-int	put_u_nb_base(size_t nb, char *base, char c)
+static int	putunb_base(size_t nb, char *base, char c)
 {
-	int		addition;
 	size_t	base_len;
 	size_t	i;
-	char	result[14];
+	char	result[18];
 
-	addition = 0;
-	if (c == 'p')
-	{
-		addition = 2;
-		write(STDOUT_FILENO, "0x", 2);
-	}
 	base_len = ft_strlen(base);
-	i = 0;
 	if (nb == 0)
-		return (write(STDOUT_FILENO, "0", 1) + addition);
+	{
+		if (c == 'p')
+			return (write(STDOUT_FILENO, "0x0", 3));
+		return (write(STDOUT_FILENO, "0", 1));
+	}
+	i = 0;
 	while (nb != 0)
 	{
-		result[13 - i++] = base[nb % base_len];
+		result[17 - i++] = base[nb % base_len];
 		nb /= base_len;
 	}
-	return (write(STDOUT_FILENO, &result[13 - i + 1], i) + addition);
+	if (c == 'p')
+	{
+		result[17 - i - 1] = '0';
+		result[17 - i] = 'x';
+		i += 2;
+	}
+	return (write(STDOUT_FILENO, &result[17 - i + 1], i));
 }
 
-int	put_nb(int nb)
+static int	putnb(int nb)
 {
-	char	result[11];
 	size_t	i;
+	char	result[11];
 
 	i = 0;
 	if (nb == 0)
@@ -123,10 +127,10 @@ int	put_nb(int nb)
 	return (write(STDOUT_FILENO, &result[10 - i + 1], i));
 }
 
-void	put_str(va_list *ap, int *output_len)
+static void	putstr(va_list *ap, int *output_len)
 {
-	size_t		len;
 	const char	*s;
+	size_t		len;
 
 	s = va_arg(*ap, const char *);
 	if (!s)
@@ -135,5 +139,13 @@ void	put_str(va_list *ap, int *output_len)
 		return ;
 	}
 	len = ft_strlen(s);
+	while (len > INT_MAX)
+	{
+		*output_len += write(STDOUT_FILENO, s, INT_MAX);
+		if (errno != 0 || *output_len < 0)
+			return ;
+		s += INT_MAX;
+		len -= INT_MAX;
+	}
 	*output_len += write(STDOUT_FILENO, s, len);
 }

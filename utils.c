@@ -1,24 +1,23 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   ft_lstlast_bonus.c                                 :+:      :+:    :+:   */
+/*   utils.c                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: shima <shima@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/04/26 15:43:26 by shima             #+#    #+#             */
-/*   Updated: 2022/05/04 07:42:40 by shima            ###   ########.fr       */
+/*   Created: 2022/06/08 12:38:10 by shima             #+#    #+#             */
+/*   Updated: 2022/06/08 13:08:44 by shima            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "libft.h"
+#include "ft_printf.h"
 
-t_list	*ft_lstlast(t_list *lst)
+size_t	ft_strlen(const char *s)
 {
-	while (lst)
-	{
-		if (!(lst->next))
-			break ;
-		lst = lst->next;
-	}
-	return (lst);
+	size_t	i;
+
+	i = 0;
+	while (s[i])
+		i++;
+	return (i);
 }

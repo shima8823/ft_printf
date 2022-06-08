@@ -1,7 +1,7 @@
 CFLAGS = -Wall -Wextra -Werror
 CPPFLAGS = -I ft_printf.h
 NAME = libftprintf.a
-SRCS = ft_printf.c libft/ft_strlen.c libft/ft_putnbr_fd.c
+SRCS = ft_printf.c utils.c
 OBJS = $(SRCS:%.c=%.o)
 
 all: $(NAME)
